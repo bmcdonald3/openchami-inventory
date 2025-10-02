@@ -24,6 +24,9 @@ import (
 	"{{.ModulePath}}/pkg/resources/node"
 	"{{.ModulePath}}/pkg/resources/fru"
 	"{{.ModulePath}}/pkg/resources/boot"
+	"{{.ModulePath}}/pkg/resources/device"
+	"{{.ModulePath}}/pkg/resources/location"
+	"{{.ModulePath}}/pkg/resources/connection"
 )
 
 // DefaultBackend is the storage backend used by the package-level convenience functions.
@@ -260,3 +263,17 @@ func GetDefaultBackend() StorageBackend {
 	ensureDefaultBackend()
 	return DefaultBackend
 }
+
+{{range .Resources}}
+// {{.Name}}Storage provides type-safe storage operations for {{.Name}} resources.
+type {{.Name}}Storage struct {
+    GenericStorage
+}
+
+// Get{{.Name}}Storage returns a type-safe storage interface for {{.Name}} resources.
+func Get{{.Name}}Storage(backend StorageBackend) *{{.Name}}Storage {
+    return &{{.Name}}Storage{
+        GenericStorage: backend.ForType("{{.Name}}"),
+    }
+}
+{{end}}
