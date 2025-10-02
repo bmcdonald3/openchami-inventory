@@ -10,7 +10,10 @@ import (
 	"github.com/openchami/inventory/pkg/codegen"
 	"github.com/openchami/inventory/pkg/resources/bmc"
 	"github.com/openchami/inventory/pkg/resources/boot"
+	"github.com/openchami/inventory/pkg/resources/connection"
+	"github.com/openchami/inventory/pkg/resources/device"
 	"github.com/openchami/inventory/pkg/resources/fru"
+	"github.com/openchami/inventory/pkg/resources/location"
 	"github.com/openchami/inventory/pkg/resources/node"
 )
 
@@ -43,6 +46,16 @@ func main() {
 
 	if err := generator.RegisterResource(&fru.FRU{}); err != nil {
 		log.Fatalf("Failed to register FRU resource: %v", err)
+	}
+
+	if err := generator.RegisterResource(&device.Device{}); err != nil {
+		log.Fatalf("Failed to register Device resource: %v", err)
+	}
+	if err := generator.RegisterResource(&location.Location{}); err != nil {
+		log.Fatalf("Failed to register Location resource: %v", err)
+	}
+	if err := generator.RegisterResource(&connection.Connection{}); err != nil {
+		log.Fatalf("Failed to register Connection resource: %v", err)
 	}
 
 	if err := generator.RegisterResource(&boot.BootConfiguration{}); err != nil {
