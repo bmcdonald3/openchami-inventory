@@ -293,6 +293,8 @@ type StorageBackend interface {
 	//   data, _ := json.Marshal(bmcV2)
 	//   err := backend.SaveWithVersion(ctx, "BMC", bmc.GetUID(), data, "v2beta1")
 	SaveWithVersion(ctx context.Context, resourceType, uid string, data json.RawMessage, version string) error
+
+	ForType(resourceType string) GenericStorage
 }
 
 // ResourceStorage provides type-safe storage operations for a specific resource type.
