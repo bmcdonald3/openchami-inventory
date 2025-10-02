@@ -73,9 +73,27 @@ func ensureDefaultBackend() {
 // This is a convenience function that uses storage.DefaultBackend.
 // For more control, use storage.Get{{.Name}}Storage(backend).LoadAll(ctx).
 func LoadAll{{.StorageName}}s() ([]{{.TypeName}}, error) {
-	ensureDefaultBackend()
-	storage := Get{{.Name}}Storage(DefaultBackend)
-	return storage.LoadAll(context.Background())
+    ensureDefaultBackend()
+    storage := Get{{.Name}}Storage(DefaultBackend)
+    
+    // Load the generic []interface{} from the backend
+    results, err := storage.LoadAll(context.Background())
+    if err != nil {
+        return nil, err
+    }
+
+    // Create a new slice of the correct, specific type
+    typedResults := make([]{{.TypeName}}, len(results))
+    for i, res := range results {
+        // Perform a type assertion on each item
+        typedRes, ok := res.({{.TypeName}})
+        if !ok {
+            return nil, fmt.Errorf("unexpected type in slice at index %d: got %T, want {{.TypeName}}", i, res)
+        }
+        typedResults[i] = typedRes
+    }
+
+    return typedResults, nil
 }
 
 // Load{{.StorageName}} retrieves a single {{.Name}} resource by UID using the default backend.
@@ -90,9 +108,22 @@ func LoadAll{{.StorageName}}s() ([]{{.TypeName}}, error) {
 // This is a convenience function that uses storage.DefaultBackend.
 // For more control, use storage.Get{{.Name}}Storage(backend).Load(ctx, uid).
 func Load{{.StorageName}}(uid string) ({{.TypeName}}, error) {
-	ensureDefaultBackend()
-	storage := Get{{.Name}}Storage(DefaultBackend)
-	return storage.Load(context.Background(), uid)
+    ensureDefaultBackend()
+    storage := Get{{.Name}}Storage(DefaultBackend)
+
+    // Load the generic interface{} from the backend
+    res, err := storage.Load(context.Background(), uid)
+    if err != nil {
+        return nil, err
+    }
+
+    // Perform a type assertion on the result
+    typedRes, ok := res.({{.TypeName}})
+    if !ok {
+        return nil, fmt.Errorf("unexpected type: got %T, want {{.TypeName}}", res)
+    }
+
+    return typedRes, nil
 }
 
 // Save{{.StorageName}} stores a {{.Name}} resource using the default backend.
