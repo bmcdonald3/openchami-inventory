@@ -16,6 +16,10 @@ import (
 	"github.com/openchami/inventory/pkg/versioning"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/openchami/inventory/pkg/resources/connection"
+	"github.com/openchami/inventory/pkg/resources/device"
+	"github.com/openchami/inventory/pkg/resources/location"
 )
 
 // Global version registry
@@ -81,6 +85,69 @@ func initializeVersionRegistry() {
 		Constructor: func() interface{} { return &bmcv2beta1.BMC{} },
 		Converter:   bmcv2beta1.NewBMCConverter(),
 		Metadata:    bmcV2Beta1,
+	}
+
+	// Register Location v1 (stable)
+	locV1 := versioning.SchemaVersion{
+		Version:    "v1",
+		IsDefault:  true,
+		Stability:  "stable",
+		Deprecated: false,
+		SpecType:   "location.LocationSpec",
+		StatusType: "location.LocationStatus",
+		TypeName:   "*location.Location",
+		Package:    "github.com/openchami/inventory/pkg/resources/location",
+	}
+	locV1TypeInfo := versioning.ResourceTypeInfo{
+		Type:        reflect.TypeOf(&location.Location{}),
+		Constructor: func() interface{} { return &location.Location{} },
+		Converter:   nil,
+		Metadata:    locV1,
+	}
+	if err := versionRegistry.RegisterVersion("Location", "v1", locV1TypeInfo); err != nil {
+		log.Fatalf("Failed to register Location v1: %v", err)
+	}
+
+	// Register Device v1 (stable)
+	devV1 := versioning.SchemaVersion{
+		Version:    "v1",
+		IsDefault:  true,
+		Stability:  "stable",
+		Deprecated: false,
+		SpecType:   "device.DeviceSpec",
+		StatusType: "device.DeviceStatus",
+		TypeName:   "*device.Device",
+		Package:    "github.com/openchami/inventory/pkg/resources/device",
+	}
+	devV1TypeInfo := versioning.ResourceTypeInfo{
+		Type:        reflect.TypeOf(&device.Device{}),
+		Constructor: func() interface{} { return &device.Device{} },
+		Converter:   nil,
+		Metadata:    devV1,
+	}
+	if err := versionRegistry.RegisterVersion("Device", "v1", devV1TypeInfo); err != nil {
+		log.Fatalf("Failed to register Device v1: %v", err)
+	}
+
+	// Register Connection v1 (stable)
+	conV1 := versioning.SchemaVersion{
+		Version:    "v1",
+		IsDefault:  true,
+		Stability:  "stable",
+		Deprecated: false,
+		SpecType:   "connection.ConnectionSpec",
+		StatusType: "connection.ConnectionStatus",
+		TypeName:   "*connection.Connection",
+		Package:    "github.com/openchami/inventory/pkg/resources/connection",
+	}
+	conV1TypeInfo := versioning.ResourceTypeInfo{
+		Type:        reflect.TypeOf(&connection.Connection{}),
+		Constructor: func() interface{} { return &connection.Connection{} },
+		Converter:   nil,
+		Metadata:    conV1,
+	}
+	if err := versionRegistry.RegisterVersion("Connection", "v1", conV1TypeInfo); err != nil {
+		log.Fatalf("Failed to register Connection v1: %v", err)
 	}
 
 	if err := versionRegistry.RegisterVersion("BMC", "v2beta1", bmcV2Beta1TypeInfo); err != nil {

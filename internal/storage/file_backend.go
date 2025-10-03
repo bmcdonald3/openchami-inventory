@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/openchami/inventory/pkg/resources"
 	"github.com/openchami/inventory/pkg/versioning"
 )
 
@@ -35,7 +36,6 @@ func (g *genericFileStorage) Load(ctx context.Context, uid string) (interface{},
 
 // LoadAll implements GenericStorage.LoadAll
 func (g *genericFileStorage) LoadAll(ctx context.Context) ([]interface{}, error) {
-	// Note: The underlying LoadAll returns []json.RawMessage, which is compatible with []interface{}
 	rawMessages, err := g.backend.LoadAll(ctx, g.resourceType)
 	if err != nil {
 		return nil, err
@@ -45,14 +45,6 @@ func (g *genericFileStorage) LoadAll(ctx context.Context) ([]interface{}, error)
 		results[i] = v
 	}
 	return results, nil
-}
-
-// Save implements GenericStorage.Save
-func (g *genericFileStorage) Save(ctx context.Context, resource interface{}) error {
-	// This is a simplified implementation detail.
-	// A real implementation would extract UID from the resource struct.
-	// For now, we assume Save is called via version-aware methods that provide the UID.
-	return fmt.Errorf("direct save on genericFileStorage is not supported; use SaveWithVersion")
 }
 
 // Delete implements GenericStorage.Delete
@@ -77,7 +69,6 @@ func (g *genericFileStorage) LoadWithVersion(ctx context.Context, uid string, ve
 
 // LoadAllWithVersion implements GenericStorage.LoadAllWithVersion
 func (g *genericFileStorage) LoadAllWithVersion(ctx context.Context, version string) ([]interface{}, error) {
-	// Note: The underlying LoadAllWithVersion returns []json.RawMessage, which is compatible with []interface{}
 	rawMessages, err := g.backend.LoadAllWithVersion(ctx, g.resourceType, version)
 	if err != nil {
 		return nil, err
@@ -89,18 +80,58 @@ func (g *genericFileStorage) LoadAllWithVersion(ctx context.Context, version str
 	return results, nil
 }
 
+func (g *genericFileStorage) Save(ctx context.Context, resource interface{}) error {
+	val := reflect.ValueOf(resource)
+	if val.Kind() != reflect.Ptr {
+		return fmt.Errorf("resource must be a pointer to a struct, but got %T", resource)
+	}
+	elem := val.Elem()
+
+	// Access the nested 'Metadata' field
+	metadataField := elem.FieldByName("Metadata")
+	if !metadataField.IsValid() {
+		return fmt.Errorf("resource of type %T is missing the 'Metadata' field", resource)
+	}
+
+	// Now, access the 'UID' field within the Metadata struct
+	uidField := metadataField.FieldByName("UID")
+	if !uidField.IsValid() || !uidField.CanSet() {
+		return fmt.Errorf("resource of type %T is missing a settable 'UID' field within its Metadata", resource)
+	}
+
+	// Generate and set the UID
+	uid, err := resources.GenerateUIDForResource(g.resourceType)
+	if err != nil {
+		return fmt.Errorf("failed to generate UID: %w", err)
+	}
+	uidField.SetString(uid)
+
+	// Marshal the full resource object
+	data, err := json.Marshal(resource)
+	if err != nil {
+		return fmt.Errorf("failed to marshal resource: %w", err)
+	}
+
+	// Call the underlying backend's save method
+	return g.backend.Save(ctx, g.resourceType, uid, data)
+}
+
 // SaveWithVersion implements GenericStorage.SaveWithVersion
 func (g *genericFileStorage) SaveWithVersion(ctx context.Context, resource interface{}, version string) error {
-	// A real implementation would need to extract the UID from the resource interface{}
-	// For now, this highlights the need for a more complex implementation if this path is taken.
-	uidField := "UID" // Assuming a field named UID exists.
 	val := reflect.ValueOf(resource)
-	if val.Kind() == reflect.Ptr {
-		val = val.Elem()
+	if val.Kind() != reflect.Ptr {
+		return fmt.Errorf("resource must be a pointer to a struct, but got %T", resource)
 	}
-	uid := val.FieldByName(uidField).String()
+	elem := val.Elem()
+
+	// Access the nested 'Metadata.UID' field
+	uidField := elem.FieldByName("Metadata").FieldByName("UID")
+	if !uidField.IsValid() {
+		return fmt.Errorf("resource of type %T is missing the 'Metadata.UID' field", resource)
+	}
+	uid := uidField.String()
 	if uid == "" {
-		return fmt.Errorf("resource has no UID field")
+		return fmt.Errorf("resource UID is empty, cannot save with version")
 	}
 
 	data, err := json.Marshal(resource)
